@@ -61,8 +61,10 @@ class SOOSCsaAnalysis:
         self.scan_type: str = Constants.DEFAULT_SCAN_TYPE
         self.format: str = Constants.DEFAULT_SCAN_FORMAT
         self.output: str = Constants.DEFAULT_SCAN_OUTPUT
-        self.severity: Optional[str] = None
+        self.severity: Optional[str] = Constants.DEFAULT_SCAN_SEVERITY
         self.target_to_scan: Optional[str] = None
+        self.vulnerability_types: Optional[str] = Constants.DEFAULT_VULNERABILITY_TYPES
+        self.debug: bool = False
 
     def parse_configuration(self, configuration: Dict, target_to_scan: str):
         self.log_level = configuration.get("logLevel", LogLevel.INFO)
@@ -86,6 +88,8 @@ class SOOSCsaAnalysis:
         # Trivy specific params
         self.severity = configuration.get("severity", Constants.DEFAULT_SCAN_SEVERITY)
         self.target_to_scan = valid_required("Target to scan", target_to_scan)
+        self.vulnerability_types = configuration.get("vulnerabilityTypes", Constants.DEFAULT_VULNERABILITY_TYPES)
+        self.debug = configuration.get("debug", False)
     
     def parse_args(self) -> None:
         parser = ArgumentParser(description="SOOS Csa")
@@ -106,7 +110,7 @@ class SOOSCsaAnalysis:
         )
         parser.add_argument("--clientId", help="SOOS Client ID - get yours from https://app.soos.io/integrate/sca", required=False)
         parser.add_argument("--apiKey", help="SOOS API Key - get yours from https://app.soos.io/integrate/sca", required=False)
-        parser.add_argument("--projectName", help="Project Name - this is what will be displayed in the SOOS app", required=False)
+        parser.add_argument("--projectName", help="Project Name - this is what will be displayed in the SOOS app.", required=False)
         parser.add_argument(
             "--apiURL",
             help="SOOS API URL - Intended for internal use only, do not modify.",
@@ -115,8 +119,27 @@ class SOOSCsaAnalysis:
         )
         parser.add_argument(
             "--logLevel",
-            help="Minimum level to show logs: PASS, IGNORE, INFO, WARN or FAIL",
+            help="Minimum level to show logs: PASS, IGNORE, INFO, WARN or FAIL.",
             default="INFO",
+            required=False,
+        )
+        parser.add_argument(
+            "--severity",
+            help="Comma separated list of vulnerability severities to include in the report. Default is 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL' (all possible values).",
+            default=Constants.DEFAULT_SCAN_SEVERITY,
+            required=False,
+        )
+        parser.add_argument(
+            "--vulnerabilityTypes",
+            help="Comma separated list of vulnerability types to include in the report. Possible values: os, library.",
+            default=Constants.DEFAULT_VULNERABILITY_TYPES,
+            required=False,
+        )
+        parser.add_argument(
+            "--debug",
+            help="Enable debug logging on trivy.",
+            action="store_true",
+            default=False,
             required=False,
         )
         parser.add_argument(
@@ -149,21 +172,21 @@ class SOOSCsaAnalysis:
         )
         parser.add_argument(
             "--onFailure",
-            help="Action to perform when the scan fails. Options: fail_the_build, continue_on_failure",
+            help="Action to perform when the scan fails. Options: fail_the_build, continue_on_failure.",
             type=str,
             default="continue_on_failure",
             required=False,
         )
         parser.add_argument(
             "--commitHash",
-            help="The commit hash value from the SCM System",
+            help="The commit hash value from the SCM System.",
             type=str,
             default=None,
             required=False,
         )
         parser.add_argument(
             "--branchName",
-            help="The name of the branch from the SCM System",
+            help="The name of the branch from the SCM System.",
             type=str,
             default=None,
             nargs="*",
@@ -171,38 +194,45 @@ class SOOSCsaAnalysis:
         )
         parser.add_argument(
             "--branchURI",
-            help="The URI to the branch from the SCM System",
+            help="The URI to the branch from the SCM System.",
             default=None,
             required=False,
         )
         parser.add_argument(
             "--buildVersion",
-            help="Version of application build artifacts",
+            help="Version of application build artifacts.",
             type=str,
             default=None,
             required=False,
         )
         parser.add_argument(
             "--buildURI",
-            help="URI to CI build info",
+            help="URI to CI build info.",
             type=str,
             default=None,
             required=False,
         )
         parser.add_argument(
             "--operatingEnvironment",
-            help="Set Operating environment for information purposes only",
+            help="Set Operating environment for information purposes only.",
             type=str,
             default=None,
             nargs="*",
             required=False,
         )
-        log("trying to parse args")
+        log("Parsing arguments", log_level=LogLevel.INFO)")
         args: Namespace = parser.parse_args()
         self.parse_configuration(vars(args), args.targetToScan)
 
     def get_command(self):
-        return Constants.DEFAULT_COMMAND_TEMPLATE.format(severity=self.severity, format=self.format, output=self.output, scan_type=self.scan_type, target_to_scan=self.target_to_scan)
+        base_command = Constants.DEFAULT_COMMAND_TEMPLATE.format(severity=self.severity, vulnerability_types=self.vulnerability_types, format=self.format, output=self.output, scan_type=self.scan_type, target_to_scan=self.target_to_scan)
+        full_command = self.add_trivy_extra_args(base_command)
+        return full_command
+
+    def add_trivy_extra_args(self, command: str) -> str:
+        if self.debug:
+            command += " --debug"
+        return command
 
     def __generate_start_analysis_url__(self) -> str:
         url = Constants.URI_START_CSA_ANALYSIS_TEMPLATE.format(soos_base_uri=self.base_uri,
@@ -424,7 +454,11 @@ class SOOSCsaAnalysis:
 
             command = self.get_command()
             log(f"Executing command: {command}")
-            os.system(command)
+            try:
+                os.system(command)
+            except Exception as error:
+                log(f"There was an error during trivy execution: {error}")
+                exit_app(error)
             
             print_line_separator()
 

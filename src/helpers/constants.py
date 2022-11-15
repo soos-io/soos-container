@@ -26,7 +26,8 @@ DEFAULT_SCAN_TYPE = "image"
 DEFAULT_SCAN_FORMAT = "json"
 DEFAULT_SCAN_OUTPUT = "results.json"
 DEFAULT_SCAN_SEVERITY = "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
-DEFAULT_COMMAND_TEMPLATE = "trivy --severity {severity} --format {format} --output {output} {scan_type} {target_to_scan}"
+DEFAULT_COMMAND_TEMPLATE = "trivy --severity {severity} --vuln-type {vulnerability_types} --format {format} --output {output} {scan_type} {target_to_scan}"
+DEFAULT_VULNERABILITY_TYPES = "os,library"
 REPORT_SCAN_RESULT_FILENAME = "./results.json"
 
 # LOGS
