@@ -71,8 +71,15 @@ class SOOSCsaAnalysis:
         logging.getLogger("SOOS Csa").setLevel(self.log_level)
         log(json.dumps(configuration, indent=2), log_level=LogLevel.DEBUG)
         # Common SOOS variables
-        self.client_id = valid_required("clientId", configuration.get("clientId"),)
-        self.api_key = valid_required("apiKey", configuration.get("apiKey"))
+        self.client_id = configuration.get("clientId")
+        if self.client_id is None:
+            self.client_id = os.environ.get(Constants.SOOS_CLIENT_ID)
+            valid_required("clientId", self.client_id)
+
+        self.api_key = configuration.get("apiKey")
+        if self.api_key is None:
+            self.api_key = os.environ.get(Constants.SOOS_API_KEY)
+            valid_required("apiKey", self.api_key)
         self.project_name = valid_required("projectName", configuration.get("projectName"))
         self.base_uri = configuration.get("apiURL", Constants.DEFAULT_BASE_URL)
         self.on_failure = configuration.get("onFailure")

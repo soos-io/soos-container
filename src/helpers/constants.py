@@ -5,6 +5,10 @@ URI_START_CSA_ANALYSIS_TEMPLATE = (
 )
 URI_UPLOAD_CSA_RESULTS_TEMPLATE = "{soos_base_uri}clients/{soos_client_id}/projects/{soos_project_id}/branches/{soos_branch_hash}/scan-types/csa/scans/{soos_analysis_id}"
 
+# SOOS ENVS
+SOOS_CLIENT_ID_KEY = "SOOS_CLIENT_ID"
+SOOS_API_KEY = "SOOS_API_KEY"
+
 # Request Headers
 HEADER_SOOS_API_KEY = "x-soos-apikey"
 HEADER_CONTENT_TYPE = "Content-Type"
