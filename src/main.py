@@ -255,7 +255,7 @@ class SOOSCsaAnalysis:
                                                                    soos_analysis_id=analysis_id)
         return url
     
-    def start_soos_analysis_request(self) -> CsaStartAnalysisResponse:
+    def start_soos_analysis_request(self, command: str) -> CsaStartAnalysisResponse:
         message: str = "An error has occurred Starting the Analysis"
         try:
             log("Making request to SOOS")
@@ -270,6 +270,7 @@ class SOOSCsaAnalysis:
                 scanMode=self.scan_type,
                 toolName=self.csa_analysis_tool,
                 toolVersion=self.csa_analysis_tool_version,
+                commandLine=command,
                 commitHash=self.commit_hash,
                 branch=self.branch_name,
                 branchUri=self.branch_uri,
@@ -456,10 +457,11 @@ class SOOSCsaAnalysis:
             log(f"Target to Scan: {self.target_to_scan}")
             print_line_separator()
 
-            log(f"Starting execution of Csa scan")
-            soos_csa_start_response = self.start_soos_analysis_request()
+
 
             command = self.get_command()
+            log(f"Starting execution of Csa scan")
+            soos_csa_start_response = self.start_soos_analysis_request(command)
             log(f"Executing command: {command}")
             try:
                 os.system(command)
